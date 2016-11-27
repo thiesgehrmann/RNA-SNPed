@@ -93,14 +93,15 @@ class PositionBaseCounts(val BAM: SAMFileReader, val reference : Map[String,Stri
 
   def callSNPs() : List[List[SNP.SNPcall]] = {
     println("Calling SNPs");
-    this.BAM.getFileHeader().getSequenceDictionary().getSequences().toList.map( x => (0 to x.getSequenceLength()-1).map( y => this.testBase(x.getSequenceName(), y)).toList )
+    // For some reason it still calculates to getSequenceLength()-1+1, so I made it -2. Never had this problem before... 
+    this.BAM.getFileHeader().getSequenceDictionary().getSequences().toList.map( x => (0 to (x.getSequenceLength()-2)).map( y => this.testBase(x.getSequenceName(), y)).toList )
   }
 
   /////////////////////////////////////////////////////////////////////////////
 
   def testBase(contig: String, pos: Int) : SNP.SNPcall = {
     val contigID   = this.seqIDMap(contig)
-    //println("%s: %d" format (contig, pos))
+    //println("%s: %d, %d" format (contig, pos, this.reference(contig).length))
     val refBase    = this.reference(contig)(pos)
     val counts     = this.baseCountMap(contigID)(pos)
     val total      = counts.fold(0){(a,b) => a + b}

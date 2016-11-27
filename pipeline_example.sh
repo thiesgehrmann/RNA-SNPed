@@ -17,7 +17,8 @@ scala_cmd="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scala -classpath $scala_clas
 
 reference_file="${SCRIPTDIR}/example/genomes/refgenome.fasta";
 gff_file="${SCRIPTDIR}/example"
-prebuilt_sjdb="${SCRIPTDIR}/example/splice_junction_db.tsv";
+prebuilt_sjdb="${SCRIPTDIR}/example/empty_splice_junction_db.tsv";
+nonempty_sjdb="${SCRIPTDIR}/example/splice_junction_db.tsv";
 data_file="$SCRIPTDIR/example/data_file.tsv"
 tree_file="$SCRIPTDIR/example/tree.tsv"
 
@@ -76,7 +77,7 @@ while read -u10 line; do
   #sauto short --job-name "star.$id" --mem 30000 -cmd "source /opt/insy/env.el7/paths && $star_cmd"
   $star_cmd
 
-done 10< <(cat $data_file | grep -v '^#') > $OUTPUT_DIR/alignment.stdout
+daone 10< <(cat $data_file | grep -v '^#') > $OUTPUT_DIR/alignment.stdout
 
 
 ###############################################################################
@@ -115,38 +116,40 @@ done 10< <(cat $data_file | grep -v '^#')
   # Call variants with my thing!!!
 
 # First make sure it compiles :P
-scalac Fasta.scala GFF.scala SNP.scala cmpCalls.scala variantCaller.scala
+cd $var_caller_dir && scalac Fasta.scala GFF.scala SNP.scala cmpCalls.scala variantCaller.scala
+cd $SCRIPTDIR
 
-scalac sampleTree.scala GFF.scala VCF.scala assignOrigin.scala filterVCF.scala phaseSNPs.scala  slidingWindowSNPs2.scala
+cd $var_caller_dir && scalac sampleTree.scala GFF.scala VCF.scala assignOrigin.scala filterVCF.scala phaseSNPs.scala  slidingWindowSNPs2.scala
+cd $SCRIPTDIR
 
 while read -u10 line; do
   
   id=`echo $line | cut -d\  -f3`;
   output_file="$OUTPUT_DIR/varcalls.binom.${id}.vcf";
-  vc_cmd="$scala_cmd -J-Xmx48G variantCaller $prebuilt_sjdb $reference_file $OUTPUT_DIR/star.${id}.Aligned.sortedByCoord.out.bam rnasnp.${id} $output_file";
   vc_cmd="$scala_cmd -J-Xmx48G variantCaller $prebuilt_sjdb $reference_file $OUTPUT_DIR/picardMD.${id}.bam rnasnp.${id} $output_file";
 
-  sauto short --job-name "varCall_${id}" --mem 50000 -cmd "$vc_cmd"
+  #sauto short --job-name "varCall_${id}" --mem 50000 -cmd "$vc_cmd"
   echo $vc_cmd;
+  $vc_cmd
 
 done 10< <(cat $data_file | grep -v '^#')
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
-  # MERGE and SORT groups
-files=""
-while read -u10 line; do
-  id=`echo $line | cut -d\  -f3`;
-  files="${files},${OUTPUT_DIR}/varcalls.binom.${id}.vcf"
-done 10< <(cat $data_file | grep -v '^#')
-outfile="$OUTPUT_DIR/varcalls.binom.sorted.merged.vcf"
-ms_cmd="$SCRIPTDIR/merge_sort_vcf.sh $files $outfile --parallel 20 --buffer-size=390G"
-
-sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$ms_cmd"
-
-nxfilt_cmd="grep -v NX $outfile > $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf"
-sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$nxfilt_cmd"
+#  # MERGE and SORT groups
+#files=""
+#while read -u10 line; do
+#  id=`echo $line | cut -d\  -f3`;
+#  files="${files},${OUTPUT_DIR}/varcalls.binom.${id}.vcf"
+#done 10< <(cat $data_file | grep -v '^#')
+#outfile="$OUTPUT_DIR/varcalls.binom.sorted.merged.vcf"
+#ms_cmd="$SCRIPTDIR/merge_sort_vcf.sh $files $outfile --parallel 20 --buffer-size=390G"
+#
+#sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$ms_cmd"
+#
+#nxfilt_cmd="grep -v NX $outfile > $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf"
+#sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$nxfilt_cmd"
 
 ###############################################################################
   # Alternative merge and sort
@@ -158,8 +161,9 @@ while read -u10 line; do
   output_file="$OUTPUT_DIR/varcalls.binom.NXfilt.${id}.vcf";
   nx_cmd="grep -v NX $OUTPUT_DIR/varcalls.binom.${id}.vcf > $output_file"
   
-  sauto short --job-name "varCall_${id}" --mem 50000 -cmd "$nx_cmd"
-  echo $vc_cmd;
+  #sauto short --job-name "varCall_${id}" --mem 50000 -cmd "$nx_cmd"
+  #echo $vc_cmd;
+  grep -v NX $OUTPUT_DIR/varcalls.binom.${id}.vcf > $output_file
 
 done 10< <(cat $data_file | grep -v '^#')
 
@@ -172,20 +176,16 @@ done 10< <(cat $data_file | grep -v '^#')
 outfile="$OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf"
 ms_cmd="$SCRIPTDIR/merge_sort_vcf.sh $files $outfile --parallel 20 --buffer-size=390G"
 
-sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$ms_cmd"
+#sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$ms_cmd"
+$ms_cmd
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 #  Assign origin to each SNP from RNA-SNP
-
-tree_with_wildtype='/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/tree_with_wildtype.tsv'
-vc_cmp_cmd="$scala_cmd -J-Xmx400G assignOrigin $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf $tree_with_wildtype  $OUTPUT_DIR/varcall.binom.origins.vcf"
-sauto bigmem --time 12:00:00 --job-name "vc_origin" --mem 400000 -cmd "$vc_cmp_cmd"
-
-tree_time='/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/tree_time.tsv'
-vc_cmp_cmd="$scala_cmd -J-Xmx400G assignOrigin $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf $tree_time $OUTPUT_DIR/varcall.binom.time_origins.vcf"
-sauto bigmem --time 12:00:00 --job-name "vc_origin" --mem 400000 -cmd "$vc_cmp_cmd"
+vc_cmp_cmd="$scala_cmd -J-Xmx400G assignOrigin $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf $tree_file  $OUTPUT_DIR/varcall.binom.origins.vcf"
+#sauto bigmem --time 12:00:00 --job-name "vc_origin" --mem 400000 -cmd "$vc_cmp_cmd"
+$vc_cmp_cmd
 
 
   # Count the number of bases with a depth greater than X per sample
@@ -213,30 +213,14 @@ done
 ###############################################################################
 ###############################################################################
 
-  # Assign origin to SNPs from GATK
-gatk_cmp_cmd="$scala_cmd -J-Xmx40G assignOrigin $OUTPUT_DIR/gatk.sorted.merged.vcf $tree_file  $OUTPUT_DIR/gatk.origins.vcf gatk"
-sauto short --job-name "gatk_origin" --mem 40000 -cmd "$gatk_cmp_cmd"
-
-###############################################################################
-###############################################################################
-###############################################################################
-
 function count_info_feature(){
   tr '\t' '\n' | tr ';' '\n' | grep -e "^$1" | cut -d= -f2 | tr ',' '\n' | sort | uniq -c | sed -e 's/^[ ]\+//' | tr ' ' '\t' | sort -k1,1n
 }
 
-mating_type_regions="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/schco3_mating_type_genes.tsv"
-gene_regions="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/schco3_genes.tsv"
-gene_coding_regions="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/schco3_genes_coding.tsv"
-named_gene_regions="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/schco3_named_genes.tsv"
-hydrophobin_genes="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/hydrophobin_genes.tsv"
-isoform_genes="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/isoform_regions.tsv"
-domain_locations='/home/nfs/thiesgehrmann/groups/w/phd/data/schco3/ipr_domain_locations.tsv'
-kosampleregions="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/knockout_samples.tsv"
+###############################################################################
 
   # Get only the SNPs that PASS
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.vcf - pass \
-  | scala filterVCF - $OUTPUT_DIR/varcall.binom.origins.pass.vcf rmKOSampleSNP $kosampleregions
+scala filterVCF $OUTPUT_DIR/varcall.binom.origins.vcf $OUTPUT_DIR/varcall.binom.origins.pass.vcf pass
 
   # Annotate these SNPs with mating type loci, genes and named genes
 scala filterVCF $OUTPUT_DIR/varcall.binom.origins.pass.vcf - annotate $named_gene_regions GN \
