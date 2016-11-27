@@ -1,0 +1,14 @@
+f0	f1	f2	f3	f4	f5	f6	f7	f8
+scaffold_14	JGI	mRNA	1	1541	.	+	.	ID=2519514
+scaffold_14	JGI	exon	1	128	.	+	.	Parent=2519514
+scaffold_14	JGI	exon	177	196	.	+	.	Parent=2519514
+scaffold_14	JGI	exon	247	417	.	+	.	Parent=2519514
+scaffold_14	JGI	exon	466	942	.	+	.	Parent=2519514
+scaffold_14	JGI	exon	992	1206	.	+	.	Parent=2519514
+scaffold_14	JGI	exon	1257	1541	.	+	.	Parent=2519514
+scaffold_14	JGI	CDS	1	128	.	+	0	Parent=2519514
+scaffold_14	JGI	CDS	177	196	.	+	1	Parent=2519514
+scaffold_14	JGI	CDS	247	417	.	+	2	Parent=2519514
+scaffold_14	JGI	CDS	466	942	.	+	2	Parent=2519514
+scaffold_14	JGI	CDS	992	1206	.	+	2	Parent=2519514
+scaffold_14	JGI	CDS	1257	1541	.	+	0	Parent=2519514

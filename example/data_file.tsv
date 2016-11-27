@@ -1,0 +1,5 @@
+#R1	#R2	id	group_id	group_name	sample_stage
+example/data/sample_0_R1.fastq	example/data/sample_0_R2.fastq	1	1	grand_child_1.1	1
+example/data/sample_1_R1.fastq	example/data/sample_1_R2.fastq	2	2	grand_child_1.2	2
+example/data/sample_2_R1.fastq	example/data/sample_2_R2.fastq	3	3	grand_child_2.1	3
+example/data/sample_3_R1.fastq	example/data/sample_3_R2.fastq	4	4	grand_child_2.2	4
