@@ -3,7 +3,6 @@
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 SCRIPTDIR="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/RNA-Snep"
 ###############################################################################
-
 #  CONFIGURATION
 
 PICARD=/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/picard/picard-tools-2.5.0/picard.jar
@@ -16,11 +15,16 @@ scala_cmd="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scala -classpath $scala_clas
 
 
 reference_file="${SCRIPTDIR}/example/genomes/refgenome.fasta";
-gff_file="${SCRIPTDIR}/example"
+gff_file="${SCRIPTDIR}/example/genome.gff"
 prebuilt_sjdb="${SCRIPTDIR}/example/empty_splice_junction_db.tsv";
 nonempty_sjdb="${SCRIPTDIR}/example/splice_junction_db.tsv";
 data_file="$SCRIPTDIR/example/data_file.tsv"
 tree_file="$SCRIPTDIR/example/tree.tsv"
+
+#Gene annotation files
+gene_coding_regions="${SCRIPTDIR}/example/gene_coding_regions.tsv"
+gene_regions="${SCRIPTDIR}/example/gene_regions.tsv"
+gene_names="${SCRIPTDIR}/example/gene_names.tsv"
 
 OUTPUT_DIR='/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/schco3/';
 OUTPUT_DIR='/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/schco3_unique/'
@@ -136,23 +140,7 @@ done 10< <(cat $data_file | grep -v '^#')
 
 ###############################################################################
 ###############################################################################
-###############################################################################
-#  # MERGE and SORT groups
-#files=""
-#while read -u10 line; do
-#  id=`echo $line | cut -d\  -f3`;
-#  files="${files},${OUTPUT_DIR}/varcalls.binom.${id}.vcf"
-#done 10< <(cat $data_file | grep -v '^#')
-#outfile="$OUTPUT_DIR/varcalls.binom.sorted.merged.vcf"
-#ms_cmd="$SCRIPTDIR/merge_sort_vcf.sh $files $outfile --parallel 20 --buffer-size=390G"
-#
-#sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$ms_cmd"
-#
-#nxfilt_cmd="grep -v NX $outfile > $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf"
-#sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$nxfilt_cmd"
-
-###############################################################################
-  # Alternative merge and sort
+  # merge and sort
 
 #First NX filter
 while read -u10 line; do
@@ -223,49 +211,22 @@ function count_info_feature(){
 scala filterVCF $OUTPUT_DIR/varcall.binom.origins.vcf $OUTPUT_DIR/varcall.binom.origins.pass.vcf pass
 
   # Annotate these SNPs with mating type loci, genes and named genes
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.pass.vcf - annotate $named_gene_regions GN \
+scala filterVCF $OUTPUT_DIR/varcall.binom.origins.pass.vcf - annotate $gene_names GN \
   | scala filterVCF - - annotate $gene_regions GID \
-  | scala filterVCF - - annotate  $domain_locations DM \
   | scala filterVCF - $OUTPUT_DIR/varcall.binom.origins.annotated.vcf annotate $gene_coding_regions GCR
-
-  # Then get only the SNPs that are NOT in mating type loci
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf removeRegions $mating_type_regions
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf $OUTPUT_DIR/varcall.binom.origins.matingtype.vcf isolateRegions $mating_type_regions MTL
 
   # Convert to GFF so we can view it in IGV
 scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toGFF3 $OUTPUT_DIR/varcall.binom.origins.annotated.gff
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.matingtype.vcf /dev/null toGFF3 $OUTPUT_DIR/varcall.binom.origins.matingtype.gff
 
-  # Produce the Tree for all the non-mating type genes
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf /dev/null toDOT $tree_with_wildtype Origin /dev/stdout | dot -Tpdf -o $OUTPUT_DIR/DOT.nonmatingtype.pdf
+  # Produce the Tree for all the genes
+scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin /dev/stdout | dot -Tpdf -o $OUTPUT_DIR/DOT.nonmatingtype.pdf
 
-  # What kind of things do we find in the mating type loci? (I expect mostly in wildtype!)
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.matingtype.vcf /dev/null toDOT $tree_with_wildtype "OriginMatingTypeLoci" /dev/stdout | dot -Tpdf -o $OUTPUT_DIR/DOT.matingtype_loci.pdf
-
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf  - homoSNP | count_info_feature NN
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.het.vcf hetSNP
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.het.vcf /dev/null toGFF3 $OUTPUT_DIR/varcall.binom.origins.nomatingtype.het.gff
-
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf - isolateRegions $isoform_genes ISO \
-  | scala filterVCF - /dev/null toDOT $tree_with_wildtype "OriginMatingTypeLoci" /dev/stdout \
-  | dot -Tpdf -o $OUTPUT_DIR/DOT.isoforms.pdf
-
-cat $OUTPUT_DIR/varcall.binom.origins.matingtype.vcf | count_info_feature MTL
-cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf | count_info_feature RG
-cat $OUTPUT_DIR/varcall.binom.origins.pass.gene_coding.vcf | count_info_feature RG
-cat $OUTPUT_DIR/varcall.binom.origins.pass.named_genes.vcf | count_info_feature RG
-
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf - isolateRegions $hydrophobin_genes GI | count_info_features GI
-
-  # Because for some reason we lost the STAR.final.log.out files
-#at sample_SNPs_reads.tsv | tail -n+2 | while read x; do
-# id=`echo $x | cut -d\  -f1`
-# nr=`echo $x | cut -d\  -f9`
-# echo -e "Uniquely mapped reads number\t$nr" > $OUTPUT_DIR/star.${id}.Log.final.out
-#one
+ # What are these SNPs like?
+scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - homoSNP | count_info_feature NN
+scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - hetSNP | count_info_feature NN
 
   # Add the read counts to the mutation counts
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf /dev/null toDOT $tree_with_wildtype Origin - \
+scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin - \
   | grep '^/[*].\+[*]/$' \
   | tr -d '*/' \
   | awk -v "OUTPUT_DIR=$OUTPUT_DIR" \
@@ -278,9 +239,9 @@ scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf /dev/null toD
        }
      }' > $OUTPUT_DIR/sample_SNPs_reads.tsv
 
-  # Phase the SNPs
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.vcf isolateRegions $gene_coding_regions GCR
-python filterVCFDeleteriousness.py $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf $gff_file $reference_file
+  # Annotate the deleteriousness of the SNPs
+scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf $OUTPUT_DIR/varcall.binom.origins.GCR.vcf isolateRegions $gene_coding_regions GCR
+python filterVCFDeleteriousness.py $OUTPUT_DIR/varcall.binom.origins.GCR.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf $gff_file $reference_file
 
   # The SNPs in domains, how many are deleterious?
 cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf | scala filterVCF - - infoStringEq DM "" not | count_info_feature DL
