@@ -1,2 +1,4 @@
-# RNA-Snep
-RNA-S$\frac{N}{E}$P is a method to detect SNPs from RNA-Seq data.
+# RNA-SNPed
+RNA-SNPed is a method to detect SNPs in an Experimental Design from RNA-Seq data
+
+

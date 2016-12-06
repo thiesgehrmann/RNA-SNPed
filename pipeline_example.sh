@@ -81,7 +81,7 @@ while read -u10 line; do
   #sauto short --job-name "star.$id" --mem 30000 -cmd "source /opt/insy/env.el7/paths && $star_cmd"
   $star_cmd
 
-daone 10< <(cat $data_file | grep -v '^#') > $OUTPUT_DIR/alignment.stdout
+done 10< <(cat $data_file | grep -v '^#') > $OUTPUT_DIR/alignment.stdout
 
 
 ###############################################################################
