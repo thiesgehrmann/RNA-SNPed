@@ -15,7 +15,7 @@ scala_cmd="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scala -classpath $scala_clas
 
 
 reference_file="${SCRIPTDIR}/example/genomes/refgenome.fasta";
-gff_file="${SCRIPTDIR}/example/genome.gff"
+gff_file="${SCRIPTDIR}/example/genomes/genome.gff"
 prebuilt_sjdb="${SCRIPTDIR}/example/empty_splice_junction_db.tsv";
 nonempty_sjdb="${SCRIPTDIR}/example/splice_junction_db.tsv";
 data_file="$SCRIPTDIR/example/data_file.tsv"
@@ -241,7 +241,7 @@ scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT 
 
   # Annotate the deleteriousness of the SNPs
 scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf $OUTPUT_DIR/varcall.binom.origins.GCR.vcf isolateRegions $gene_coding_regions GCR
-python filterVCFDeleteriousness.py $OUTPUT_DIR/varcall.binom.origins.GCR.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf $gff_file $reference_file
+python varCaller/filterVCFDeleteriousness.py $OUTPUT_DIR/varcall.binom.origins.GCR.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf $gff_file $reference_file
 
   # The SNPs in domains, how many are deleterious?
 cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf | scala filterVCF - - infoStringEq DM "" not | count_info_feature DL
@@ -307,64 +307,5 @@ cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
   > $OUTPUT_DIR/mutation_rate_slidingWindow.tsv
 
 ###############################################################################
-###############################################################################
-###############################################################################
-  # Look at a time-based tree in favor of RNA-editing SNPs
-
-scala filterVCF $OUTPUT_DIR/varcall.binom.time_origins.vcf - pass \
-  | scala filterVCF - - annotate $named_gene_regions GN \
-  | scala filterVCF - - annotate $gene_regions GID \
-  | scala filterVCF - - annotate $gene_coding_regions GCR \
-  | scala filterVCF - /dev/null toDOT $tree_time TimeTree /dev/stdout \
-  | dot -Tpdf -o $OUTPUT_DIR/DOT.RNAEditing.pdf
-
-
-###############################################################################
-
-function to_dot() {
-
-  graph_file="$1";
-
-  echo "graph origins{"
-
-  while read line; do
-    count=`echo $line | cut -d\  -f1`;
-    node=`echo $line | cut -d\  -f2`;
-    node_id=`cat $graph_file | awk -v "node=$node" '{ if($2 == node){ print $1 }}'`
-    echo "n${node_id}[label=\"${node}\\n($count)\"]";
-  done
-
-  cat $graph_file | grep -v "^#" | awk '{ if($3 != "-"){ split($3,children,","); for(child in children){ print "n" $1 " -- " "n" children[child];}}}'
-
-  echo "}";
-
-}
-
-###############################################################################
-
-cat $OUTPUT_DIR/varcall.binom.origins.pass.nomatingtype.vcf | count_info_feature NN | to_dot $tree_with_wildtype | dot -Tpdf -o origin_mutations.pdf
-
-###############################################################################
-###############################################################################
-###############################################################################
-  # Count SNPs in each
-while read -u10 line; do
-
-  id=`echo $line | cut -d\  -f3`;
-
-  nvars=`cat $OUTPUT_DIR/varcalls.binom.${id}.tsv | awk '{if($3 == "T"){print($0)}}' | wc -l`
-
-  echo -e "$id\t$nvars"
-
-done 10< <(cat $data_file | grep -v '^#') > $OUTPUT_DIR/varcalls.counts.tsv
-
-
-###############################################################################
-###############################################################################
-###############################################################################
-  # Compare variants
-
-
-#scala -J-Xmx30G cmpVariants ../schco3/varcalls.1.tsv ../schco3/varcalls.2.tsv ../schco3/varcmp.1.2.tsv ../schco3/varcmp.2.1.tsv
 
 
