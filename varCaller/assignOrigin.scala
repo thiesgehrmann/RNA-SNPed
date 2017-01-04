@@ -6,7 +6,7 @@ import java.io._
 import scala.collection.mutable.ArrayBuffer
 
 //import VCF;
-
+package rnasnped {
 object assignOrigin{
 
   final val minExpr       =  3
@@ -18,6 +18,11 @@ object assignOrigin{
   /////////////////////////////////////////////////////////////////////////////
 
   def main(args: Array[String]) = {
+
+    if( args.length < 3 || args(0) == "help") {
+      help()
+    } else {
+
 
     val inputFile  = args(0);
     val treeFile   = args(1);
@@ -33,6 +38,20 @@ object assignOrigin{
       VCGroups.filter(x => x.length > 0).map( x => assignOriginToVCGroupGATK(x, sTree))
     }
     VCF.write(cmpVCs, outputFile);
+
+    }
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  def help() = {
+    println("assignOrigin: Assign the origin of SNPs to nodes in a sample tree")
+    println("Usage: assignOridin <inputFile> <treeFile> <outputFile> [gatkFlag]")
+    println("")
+    println("  inputFile:  A merged and sorted VCF file (several variantCaller VCFs merged)")
+    println("  inputTree:  A file describing the structure of the experimental design")
+    println("  outputFile: The location of the output VCF file")
+    println("  gatkFlag:   A flag indicating if the SNP calls were performed by GATK or not (can take any value)")
 
   }
 
@@ -363,4 +382,5 @@ object assignOrigin{
 //             Map("NS" -> VCs.length.toString, "NP" -> nObs.toString))
 //    }
 //  }
+}
 }

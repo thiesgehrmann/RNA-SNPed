@@ -14,35 +14,53 @@ import org.apache.commons.math3.distribution.BinomialDistribution
 
 //import Fasta;
 
+package rnasnped {
+
 object variantCaller {
 
   def main(args: Array[String]) = {
 
-    val sjdb_file      = args(0);
-    val reference_file = args(1);
-    val bam_file       = args(2);
-    val sample_id      = args(3);
-    val out_file       = args(4);
+    if( args.length < 5 || args(0) == "help") {
+      help()
+    } else {
 
-    println(sjdb_file)
-    println(bam_file);
-    println(out_file);
+      val sjdb_file      = args(0);
+      val reference_file = args(1);
+      val bam_file       = args(2);
+      val sample_id      = args(3);
+      val out_file       = args(4);
 
-    val reference = Fasta.read(reference_file).map(x => (x.description, x.sequence)).toMap
-    val BAM       = new SAMFileReader(new File(bam_file));
-    val sjdb      = Source.fromFile(sjdb_file).getLines();
+      println(sjdb_file)
+      println(bam_file);
+      println(out_file);
+
+      val reference = Fasta.read(reference_file).map(x => (x.description, x.sequence)).toMap
+      val BAM       = new SAMFileReader(new File(bam_file));
+      val sjdb      = Source.fromFile(sjdb_file).getLines();
     
 
-    val counts = new PositionBaseCounts(BAM, reference, sjdb)
-    counts.processReads();
-    //SNP.writeCalls(counts.callSNPs().flatten, out_file);
-    SNP.writeVCF(counts.callSNPs().flatten, out_file, sample_id);
+      val counts = new PositionBaseCounts(BAM, reference, sjdb)
+      counts.processReads();
+      //SNP.writeCalls(counts.callSNPs().flatten, out_file);
+      SNP.writeVCF(counts.callSNPs().flatten, out_file, sample_id);
 
   }
 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+  def help() = {
+    println("variantCaller: calling Variants from BAM file")
+    println("Usage: variantCaller <sjdb_file> <reference_file> <bam_file> <sample_id> <out_file>")
+    println("")
+    println("  sjdb_file:      A splice junction database, tab separated, containing splice junctions (e.g. output by STAR aligner")
+    println("  reference_file: A multiFASTA file with the reference genome")
+    println("  bam_file:       The BAM file (MUST BE ALIGNED TO reference_file)")
+    println("  sample_id:      The sample identifier of this sample")
+    println("  out_file:       The output file (will be in VCF format)")
+  }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -217,3 +235,6 @@ class PositionBaseCounts(val BAM: SAMFileReader, val reference : Map[String,Stri
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+}
+}

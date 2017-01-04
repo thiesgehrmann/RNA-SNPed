@@ -3,7 +3,7 @@ import scala.collection.JavaConversions._
 import scala.io.Source
 import java.io._
 
-
+package rnasnped {
 object phaseSNPs {
 
   def main(args: Array[String]) = {
@@ -52,4 +52,5 @@ object phaseSNPs {
 
   /////////////////////////////////////////////////////////////////////////////
 
+}
 }

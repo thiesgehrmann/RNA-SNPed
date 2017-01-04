@@ -7,6 +7,7 @@ import java.util.Date;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+package rnasnped {
 object VCF{
 
   final var emptyString = ".";
@@ -159,5 +160,7 @@ object VCF{
                                                             vc.info.map{ case (x,y) => "%s%s%s" format (x, if(y.length==0) "" else "=" ,y)}.mkString(";") ))
 
   }
+
+}
 
 }

@@ -5,7 +5,7 @@
 import scala.util.parsing.combinator._
 import java.io._
 
-
+package rnasnped{
 object Fasta {
   /****************************************************************************
    * https://gist.github.com/paradigmatic/3437345                             *
@@ -73,4 +73,5 @@ object Fasta {
     outfd.close()
   }
 
+}
 }

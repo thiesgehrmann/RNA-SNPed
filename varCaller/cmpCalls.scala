@@ -3,6 +3,7 @@ import scala.io.Source
 import java.io._
 import scala.collection.JavaConversions._
 
+package rnasnped {
 object cmpCalls {
 
   case class callCmp(contig: String,
@@ -163,4 +164,5 @@ object cmpCalls {
     varInA.altBase == varInB.altBase
   }
 
+}
 }

@@ -6,7 +6,7 @@ import java.io._
 import scala.collection.mutable.ArrayBuffer
 import org.arabidopsis.interval._
 
-
+package rnasnped{
 object filterVCF {
 
   val operations = Map( "removeRegions"  -> remove _,
@@ -26,6 +26,10 @@ object filterVCF {
 
   def main(args: Array[String]) = {
 
+    if( args.length < 3 || args(0) == "help") {
+      help()
+    } else {
+
     val vcfFile   = args(0);
     val outFile   = args(1);
     val operation = args(2);
@@ -35,10 +39,17 @@ object filterVCF {
     val vcfFilt = operations(operation)(operationParams, vcf)
     VCF.write(vcfFilt, outFile)
 
+    }
+
   }
 
   /////////////////////////////////////////////////////////////////////////////
 
+  def help() = {
+    println("help");
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
     
   def readRegions(regionsFile: String) = {
     var regionsMap     = scala.collection.mutable.Map.empty[String,IntervalTree]
@@ -266,4 +277,5 @@ object filterVCF {
     }
   }
 
+}
 }

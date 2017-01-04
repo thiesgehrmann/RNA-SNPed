@@ -1,5 +1,6 @@
 import java.io.{PrintWriter, FileWriter}
 
+package rnasnped {
 object GFF{
 
   case class GFFEntry(seqname: String,
@@ -26,4 +27,5 @@ object GFF{
 
  ///////////////////////////////////////////////////////////////////////////// 
 
+}
 }

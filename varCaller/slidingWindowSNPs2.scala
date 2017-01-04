@@ -11,9 +11,34 @@ import org.arabidopsis.interval._
  * If you want to merge these regions later, it is ok, but they should not be
  * compared individually*/
 
+package rnasnped{
 object slidingWindowSNPs2 {
 
   def main(args: Array[String]) = {
+
+    if (args.length < 3 || args(0) == "help") {
+      help()
+    } else {
+      perform(args)
+    }
+
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  def help() = {
+    println("slidingWindowSNPs2: Count SNPs at each base in a sliding window")
+    println("Usage: slidingwindowSNPs2 <vcfFile> <outFile> <windowSize1>[,windowsize2[,windowsize3...]]")
+    println("")
+    println(" vcfFile: The input VCF file")
+    println(" outFile: The output file")
+    println(" windowsize: Integer, the size of the window you want to consider.")
+    println("              ATTN: a provided window size of 5 will count 5 bases upstream and 5 bases downstream")
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  def perform(args: Array[String]) = {
     
     val vcfFile     = args(0);
     val outFile     = args(1);
@@ -79,4 +104,5 @@ object slidingWindowSNPs2 {
 
   /////////////////////////////////////////////////////////////////////////////
 
+}
 }

@@ -1,15 +1,13 @@
 #!/bin/usr/sh
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
-SCRIPTDIR="/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/RNA-Snep"
 ###############################################################################
 #  CONFIGURATION
 
 PICARD=/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/picard/picard-tools-2.5.0/picard.jar
-var_caller_dir=$SCRIPTDIR/varCaller
-scala_class_path="$var_caller_dir:$var_caller_dir/lib/htsjdk-2.5.0-SNAPSHOT-all.jar:$var_caller_dir/lib/log4j-1.2.17.jar:$var_caller_dir/lib_compile/scala-2.10.2/scala-compiler.jar:$var_caller_dir/lib/commons-math3-3.6.1.jar"
-alias scala="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scala -classpath $scala_class_path";
-alias scalac="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scalac -classpath $scala_class_path";
+scala="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scala";
+scalac="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scalac";
+scalalib="/home/nfs/thiesgehrmann/scala-2.11.7/lib/scala-library.jar"
 
 scala_cmd="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scala -classpath $scala_class_path"
 
@@ -26,9 +24,17 @@ gene_coding_regions="${SCRIPTDIR}/example/gene_coding_regions.tsv"
 gene_regions="${SCRIPTDIR}/example/gene_regions.tsv"
 gene_names="${SCRIPTDIR}/example/gene_names.tsv"
 
-OUTPUT_DIR='/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/schco3/';
-OUTPUT_DIR='/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/schco3_unique/'
 OUTPUT_DIR="$SCRIPTDIR/example_output"
+
+###############################################################################
+###############################################################################
+###############################################################################
+
+var_caller_dir=$SCRIPTDIR/varCaller
+
+scala_class_path="$var_caller_dir:$var_caller_dir/lib/htsjdk-2.5.0-SNAPSHOT-all.jar:$var_caller_dir/lib/log4j-1.2.17.jar:$var_caller_dir/lib_compile/scala-2.10.2/scala-compiler.jar:$var_caller_dir/lib/commons-math3-3.6.1.jar"
+alias scala="$scala -classpath $scala_class_path";
+alias scalac="$scalac -classpath $scala_class_path";
 
 ###############################################################################
 ###############################################################################
@@ -212,8 +218,8 @@ scala filterVCF $OUTPUT_DIR/varcall.binom.origins.vcf $OUTPUT_DIR/varcall.binom.
 
   # Annotate these SNPs with mating type loci, genes and named genes
 scala filterVCF $OUTPUT_DIR/varcall.binom.origins.pass.vcf - annotate $gene_names GN \
-  | scala filterVCF - - annotate $gene_regions GID \
-  | scala filterVCF - $OUTPUT_DIR/varcall.binom.origins.annotated.vcf annotate $gene_coding_regions GCR
+  | java -jar rnasnped/rnasnped.jar filterVCF - - annotate $gene_regions GID \
+  | java -jar rnasnped/rnasnped.jar filterVCF - $OUTPUT_DIR/varcall.binom.origins.annotated.vcf annotate $gene_coding_regions GCR
 
   # Convert to GFF so we can view it in IGV
 scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toGFF3 $OUTPUT_DIR/varcall.binom.origins.annotated.gff
@@ -244,14 +250,14 @@ scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf $OUTPUT_DIR/varc
 python varCaller/filterVCFDeleteriousness.py $OUTPUT_DIR/varcall.binom.origins.GCR.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf $gff_file $reference_file
 
   # The SNPs in domains, how many are deleterious?
-cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf | scala filterVCF - - infoStringEq DM "" not | count_info_feature DL
+cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf | java -jar rnasnped/rnasnped.jar filterVCF - - infoStringEq DM "" not | count_info_feature DL
 
 cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf \
-  | scala phaseSNPs - $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.phased.vcf GID
+  | java -jar rnasnped/rnasnped.jar phaseSNPs - $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.phased.vcf GID
 
 cat $OUTPUT_DIR/varcall.binom.origins.annotated.vcf \
-  | scala filterVCF - - isolateRegions $gene_coding_regions GCR \
-  | scala phaseSNPs - - GID
+  | java -jar rnasnped/rnasnped.jar filterVCF - - isolateRegions $gene_coding_regions GCR \
+  | java -jar rnasnped/rnasnped.jar phaseSNPs - - GID
 
   # Get window for ALL hetero/homozygous SNPs in the wildtype
 win_cmd="cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
@@ -275,7 +281,7 @@ sauto short --job-name "wincmd_ha" --mem 50000 -cmd "$win_cmd"
 
   # Get the SNPs to estimate mutation rate
 cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
-  | scala filterVCF - /dev/null toDOT $tree_with_wildtype MutationRate - \
+  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_with_wildtype MutationRate - \
   | grep -e '^/[*]' \
   | tr -d '/*' \
   > $OUTPUT_DIR/mutation_rate_samples.tsv
@@ -283,7 +289,7 @@ cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
 
   # Mutation rate only in the mating type loci!
 cat $OUTPUT_DIR/varcall.binom.origins.matingtype.vcf \
-  | scala filterVCF - /dev/null toDOT $tree_with_wildtype MTLSNPs - \
+  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_with_wildtype MTLSNPs - \
   | grep -e '^/[*]' \
   | tr -d '/*' \
   > $OUTPUT_DIR/mutation_rate_mtl.tsv
@@ -291,17 +297,17 @@ cat $OUTPUT_DIR/varcall.binom.origins.matingtype.vcf \
   # Look at mutations in highly mutated regions
 cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
   | grep -v "70s" \
-  | scala slidingWindowSNPs - - 10000 20 \
-  | scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf - isolateRegions - SW \
+  | java -jar rnasnped/rnasnped.jar slidingWindowSNPs - - 10000 20 \
+  | java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf - isolateRegions - SW \
   | grep -v "70s" \
-  | scala filterVCF - /dev/null toDOT $tree_with_wildtype SlidingWindowSNPs -  \
+  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_with_wildtype SlidingWindowSNPs -  \
   | dot -Tpdf -o $OUTPUT_DIR/DOT.SlidingWindowSNPs.pdf
 
 cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
   | grep -v "70s" \
-  | scala slidingWindowSNPs - - 10000 20 \
-  | scala filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf - isolateRegions - SW \
-  | scala filterVCF - /dev/null toDOT $tree_with_wildtype MTLSNPs - \
+  | java -jar rnasnped/rnasnped.jar slidingWindowSNPs - - 10000 20 \
+  | java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf - isolateRegions - SW \
+  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_with_wildtype MTLSNPs - \
   | grep -e '^/[*]' \
   | tr -d '/*' \
   > $OUTPUT_DIR/mutation_rate_slidingWindow.tsv

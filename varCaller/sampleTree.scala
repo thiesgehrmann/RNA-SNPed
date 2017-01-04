@@ -2,7 +2,7 @@ import scala.io.Source
 import java.io._
 
 ///////////////////////////////////////////////////////////////////////////////
-
+package rnasnped {
 object sampleTree {
 
   case class treeNode(id: Int = -1, name: String = "", children: Array[Int] = Array.empty[Int], isLeaf: Boolean = false, height: Int = -1)
@@ -38,4 +38,5 @@ object sampleTree {
 
   /////////////////////////////////////////////////////////////////////////////
 
+}
 }
