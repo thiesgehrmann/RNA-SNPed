@@ -214,25 +214,25 @@ function count_info_feature(){
 ###############################################################################
 
   # Get only the SNPs that PASS
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.vcf $OUTPUT_DIR/varcall.binom.origins.pass.vcf pass
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.vcf $OUTPUT_DIR/varcall.binom.origins.pass.vcf pass
 
   # Annotate these SNPs with mating type loci, genes and named genes
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.pass.vcf - annotate $gene_names GN \
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.pass.vcf - annotate $gene_names GN \
   | java -jar rnasnped/rnasnped.jar filterVCF - - annotate $gene_regions GID \
   | java -jar rnasnped/rnasnped.jar filterVCF - $OUTPUT_DIR/varcall.binom.origins.annotated.vcf annotate $gene_coding_regions GCR
 
   # Convert to GFF so we can view it in IGV
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toGFF3 $OUTPUT_DIR/varcall.binom.origins.annotated.gff
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toGFF3 $OUTPUT_DIR/varcall.binom.origins.annotated.gff
 
   # Produce the Tree for all the genes
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin /dev/stdout | dot -Tpdf -o $OUTPUT_DIR/DOT.nonmatingtype.pdf
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin /dev/stdout | dot -Tpdf -o $OUTPUT_DIR/DOT.nonmatingtype.pdf
 
  # What are these SNPs like?
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - homoSNP | count_info_feature NN
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - hetSNP | count_info_feature NN
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - homoSNP | count_info_feature NN
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - hetSNP | count_info_feature NN
 
   # Add the read counts to the mutation counts
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin - \
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin - \
   | grep '^/[*].\+[*]/$' \
   | tr -d '*/' \
   | awk -v "OUTPUT_DIR=$OUTPUT_DIR" \
@@ -246,7 +246,7 @@ scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT 
      }' > $OUTPUT_DIR/sample_SNPs_reads.tsv
 
   # Annotate the deleteriousness of the SNPs
-scala filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf $OUTPUT_DIR/varcall.binom.origins.GCR.vcf isolateRegions $gene_coding_regions GCR
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf $OUTPUT_DIR/varcall.binom.origins.GCR.vcf isolateRegions $gene_coding_regions GCR
 python varCaller/filterVCFDeleteriousness.py $OUTPUT_DIR/varcall.binom.origins.GCR.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf $gff_file $reference_file
 
   # The SNPs in domains, how many are deleterious?
