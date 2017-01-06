@@ -112,10 +112,6 @@ while read -u10 line; do
  
   picard_cmd1="java -jar $PICARD AddOrReplaceReadGroups I=$OUTPUT_DIR/star.${id}.Aligned.sortedByCoord.out.bam O=$OUTPUT_DIR/picardRG.${id}.bam RGID=${id} RGLB=PA RGPL=illumina RGSM=${id} RGPU=HISEQ2500"
   picard_cmd2="java -jar $PICARD MarkDuplicates I=$OUTPUT_DIR/picardRG.${id}.bam O=$OUTPUT_DIR/picardMD.${id}.bam CREATE_INDEX=true VALIDATION_STRINGENCY=SILENT M=$OUTPUT_DIR/picardMD.output_metrics.${id};"
-  picard_cmd="$picard_cmd1;$picard_cmd2";
-  # If you want to use slurm!
-  #sauto short --job-name "picard_${id}" --mem 30000 --cpus-per-task 1 -cmd "$picard_cmd2"
-  echo $id
   $picard_cmd1
   $picard_cmd2
 
@@ -172,10 +168,10 @@ while read -u10 line; do
   id=`echo $line | cut -d\  -f3`;
   files="${files},${OUTPUT_DIR}/varcalls.binom.NXfilt.${id}.vcf"
 done 10< <(cat $data_file | grep -v '^#')
+
 outfile="$OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf"
 ms_cmd="$SCRIPTDIR/merge_sort_vcf.sh $files $outfile --parallel 20 --buffer-size=390G"
 
-#sauto bigmem --time 12:00:00 --job-name "ms_varcall" --mem 400000 -cmd "$ms_cmd"
 $ms_cmd
 
 ###############################################################################
@@ -186,20 +182,20 @@ msg "Assign origin to each SNP"
 
 #  Assign origin to each SNP from RNA-SNP
 vc_cmp_cmd="java -Xmx400G -jar rnasnped/rnasnped.jar assignOrigin $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf $tree_file  $OUTPUT_DIR/varcall.binom.origins.vcf"
-#sauto bigmem --time 12:00:00 --job-name "vc_origin" --mem 400000 -cmd "$vc_cmp_cmd"
 $vc_cmp_cmd
 
 
-msg "Count base depths, you can remove this if you want..."
+msg "Count how many SNPs have at least a minimum depth"
 
   # Count the number of bases with a depth greater than X per sample
 for NR in 5 10 15 20 50; do
   ls $OUTPUT_DIR \
     | grep -e 'varcalls.binom.[0-9]\+[.]vcf$' \
     | while read x; do
-      c_cmd="java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/$x - infoMin DP ${NR} | grep -v '^#' | wc -l > $OUTPUT_DIR/$x.min${NR}.count"
-      $c_cmd
-      #sauto short --job-name "countLOL" --mem 40000 -cmd "$c_cmd"
+      java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/$x - infoMin DP ${NR} \
+        | grep -v '^#' \
+        | wc -l \
+        > $OUTPUT_DIR/$x.min${NR}.count
     done
 done
 
