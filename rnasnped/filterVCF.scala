@@ -46,7 +46,69 @@ object filterVCF {
   /////////////////////////////////////////////////////////////////////////////
 
   def help() = {
-    println("help");
+
+    println("filterVCF: perform filtering operations on VCF files from the rnaSNPed toolkit")
+    println("Usage: filterVCF <inputVCF> <outputVCF> <operation> <operation_options>")
+    println("")
+    println(" inputVCF: location of input VCF (- for stdin)")
+    println(" outputVCF: location of output VCF (- for stdout)")
+    println(" operation:")
+    println("")
+    println("  help")
+    println("  Show this help message")
+    println("")
+    println("  removeRegions <regionsFile>")
+    println("  Remove items from the VCF file that lie within regions specified in <regionsFile>")
+    println("    regionsFile: A tab delimited file with three columns, chromosome_name, start, and end")
+    println("")
+    println("  isolateRegions <regionsFile>")
+    println("  Remove items from the VCF file that DO NOT lie within regions specified in <regionsFile>")
+    println("    regionsFile: A tab delimited file with three columns, chromosome_name, start, and end")
+    println("")
+    println("  annotate <regionsFile> <fieldName>")
+    println("  Add an extra field in the info column of the VCF with name <fieldName>, and a value specified in <regionsFile>")
+    println("    regionsFile: A tab delimited file with FOUR columns, chromosome_name, start, end, label")
+    println("    fieldName:   The fieldname to give this annotation")
+    println("")
+    println("  infoMin <fieldName> <value>")
+    println("  Threshold the VCF file based on <fieldName> in the info column")
+    println("    fieldName: The fieldname to use")
+    println("    value:     The minimum value to allow in outputVCF")
+    println("")
+    println("  infoMax <fieldName> <value>")
+    println("  Threshold the VCF file based on <fieldName> in the info column")
+    println("    fieldName: The fieldname to use")
+    println("    value:     The maximum value to allow in outputVCF")
+    println("")
+    println("  infoStringEq <fieldName> <value> [complement]")
+    println("  Remove elements in the VCF file whose info field value in <fieldName> is not equal to <value>")
+    println("    fieldName:  The fieldname to use")
+    println("    value:      The value to compare against")
+    println("    complement: any non-empty value given here will produce the complementary output")
+    println("")
+    println("  pass")
+    println("  Remove all variants which did not pass a previous filtering step")
+    println("")
+    println("  toGFF3 <outputFile>")
+    println("  Output a GFF3 version of this VCF file")
+    println("    outputFile: location of output GFF3 file (- for stdout)")
+    println("")
+    println("  toDOT <treeFile> <graphName> <outFile>")
+    println("  Given a tree structure (the same used for assignOrigin), produce a DOT formatted graph with SNP counts")
+    println("    treeFile: the location of the tree file")
+    println("    graphName: The name to give the graph (e.g. SNP)")
+    println("    outFile:   The location of the output (- for stdout)")
+    println("")
+    println("  hetSNP")
+    println("  Return only heterozygous SNPs")
+    println("")
+    println("  homoSNP")
+    println("  Return only homozygous SNPs")
+    println("")
+    println("  rmKOSampleSNP <regionsFile>")
+    println("  If some of your samples are knockouts, SNPs identified in those regions could be a result of the knockout")
+    println("  This command removes them if the SNP lies within the region of a knocked out gene AND is present in the knockout sample.")
+    println("   regionsFile: a tab separated file with FOUR fields: chromosome_name, start, end and (comma separated list of sample ids that have this gene knocked out.)")
   }
 
   /////////////////////////////////////////////////////////////////////////////
@@ -269,8 +331,8 @@ object filterVCF {
           true
         } else {
           val infoPossible = vc.info("NP")
-          val rSampleIDs = presentInRegions.map( r => sampleIDs(vc.contig, r.getLow(), r.getHigh())).flatten.toSet                                                                                                                    
-          val pass = presentInRegions.zipWithIndex.map{ case (p, i) => if(p == 'y' && !rSampleIDs.contains(i)) true else false}.foldLeft(false)(_ | _)                                                                                
+          val rSampleIDs = presentInRegions.map( r => sampleIDs(vc.contig, r.getLow(), r.getHigh())).flatten.toSet
+          val pass = presentInRegions.zipWithIndex.map{ case (p, i) => if(p == 'y' && !rSampleIDs.contains(i)) true else false}.foldLeft(false)(_ | _)
           pass
         }                                                                                                                                                                                                                    
       }
