@@ -1,4 +1,5 @@
-#!/bin/usr/sh
+#!/usr/bin/bash
+set -e
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 ###############################################################################
@@ -30,18 +31,22 @@ OUTPUT_DIR="$SCRIPTDIR/example_output"
 ###############################################################################
 ###############################################################################
 
-var_caller_dir=$SCRIPTDIR/varCaller
+function msg {
 
-scala_class_path="$var_caller_dir:$var_caller_dir/lib/htsjdk-2.5.0-SNAPSHOT-all.jar:$var_caller_dir/lib/log4j-1.2.17.jar:$var_caller_dir/lib_compile/scala-2.10.2/scala-compiler.jar:$var_caller_dir/lib/commons-math3-3.6.1.jar"
-alias scala="$scala -classpath $scala_class_path";
-alias scalac="$scalac -classpath $scala_class_path";
+  echo "###############################################################################"
+  echo "# $@"
+  echo "###############################################################################"
+
+}
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
   # Generate index using the SJDB we already have...
 
-mkdir $OUTPUT_DIR/genome_index
+mkdir -p $OUTPUT_DIR/genome_index
+
+msg "Generating STAR index"
 
 STAR --runMode genomeGenerate \
      --runThreadN 2 \
@@ -53,6 +58,7 @@ STAR --runMode genomeGenerate \
 ###############################################################################
   # Generate reference index
 
+msg "Generating Fasta index"
 samtools faidx $reference_file
 
 ###############################################################################
@@ -60,6 +66,7 @@ samtools faidx $reference_file
 ###############################################################################
   # Align reads to the reference
 
+msg "Aligning reads"
 while read -u10 line; do
 
   R1=`echo $line | cut -d\  -f1`;
@@ -87,13 +94,16 @@ while read -u10 line; do
   #sauto short --job-name "star.$id" --mem 30000 -cmd "source /opt/insy/env.el7/paths && $star_cmd"
   $star_cmd
 
-done 10< <(cat $data_file | grep -v '^#') > $OUTPUT_DIR/alignment.stdout
+done 10< <(cat $data_file | grep -v '^#') 
+#> $OUTPUT_DIR/alignment.stdout
 
 
 ###############################################################################
 ###############################################################################
 ###############################################################################
 # Mark duplicates
+
+msg "Marking duplicates with PICARD"
 
 PICARD=/home/nfs/thiesgehrmann/groups/w/phd/tasks/somatic_variation/picard/picard-tools-2.5.0/picard.jar
 
@@ -123,20 +133,13 @@ done 10< <(cat $data_file | grep -v '^#')
 ###############################################################################
 ###############################################################################
 ###############################################################################
-  # Call variants with my thing!!!
 
-# First make sure it compiles :P
-cd $var_caller_dir && scalac Fasta.scala GFF.scala SNP.scala cmpCalls.scala variantCaller.scala
-cd $SCRIPTDIR
-
-cd $var_caller_dir && scalac sampleTree.scala GFF.scala VCF.scala assignOrigin.scala filterVCF.scala phaseSNPs.scala  slidingWindowSNPs2.scala
-cd $SCRIPTDIR
-
+msg "Call variants using RNASNPed"
 while read -u10 line; do
   
   id=`echo $line | cut -d\  -f3`;
   output_file="$OUTPUT_DIR/varcalls.binom.${id}.vcf";
-  vc_cmd="$scala_cmd -J-Xmx48G variantCaller $prebuilt_sjdb $reference_file $OUTPUT_DIR/picardMD.${id}.bam rnasnp.${id} $output_file";
+  vc_cmd="java -Xmx48G -jar rnasnped/rnasnped.jar variantCaller $prebuilt_sjdb $reference_file $OUTPUT_DIR/picardMD.${id}.bam rnasnp.${id} $output_file";
 
   #sauto short --job-name "varCall_${id}" --mem 50000 -cmd "$vc_cmd"
   echo $vc_cmd;
@@ -147,6 +150,8 @@ done 10< <(cat $data_file | grep -v '^#')
 ###############################################################################
 ###############################################################################
   # merge and sort
+
+msg "Merge and sort VCF files"
 
 #First NX filter
 while read -u10 line; do
@@ -176,20 +181,25 @@ $ms_cmd
 ###############################################################################
 ###############################################################################
 ###############################################################################
+
+msg "Assign origin to each SNP"
+
 #  Assign origin to each SNP from RNA-SNP
-vc_cmp_cmd="$scala_cmd -J-Xmx400G assignOrigin $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf $tree_file  $OUTPUT_DIR/varcall.binom.origins.vcf"
+vc_cmp_cmd="java -Xmx400G -jar rnasnped/rnasnped.jar assignOrigin $OUTPUT_DIR/varcalls.binom.sorted.merged.NXfilt.vcf $tree_file  $OUTPUT_DIR/varcall.binom.origins.vcf"
 #sauto bigmem --time 12:00:00 --job-name "vc_origin" --mem 400000 -cmd "$vc_cmp_cmd"
 $vc_cmp_cmd
 
+
+msg "Count base depths, you can remove this if you want..."
 
   # Count the number of bases with a depth greater than X per sample
 for NR in 5 10 15 20 50; do
   ls $OUTPUT_DIR \
     | grep -e 'varcalls.binom.[0-9]\+[.]vcf$' \
     | while read x; do
-      c_cmd="$scala_cmd filterVCF $OUTPUT_DIR/$x - infoMin DP ${NR} | grep -v '^#' | wc -l > $OUTPUT_DIR/$x.min${NR}.count"
-      echo $c_cmd
-      sauto short --job-name "countLOL" --mem 40000 -cmd "$c_cmd"
+      c_cmd="java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/$x - infoMin DP ${NR} | grep -v '^#' | wc -l > $OUTPUT_DIR/$x.min${NR}.count"
+      $c_cmd
+      #sauto short --job-name "countLOL" --mem 40000 -cmd "$c_cmd"
     done
 done
 
@@ -213,24 +223,37 @@ function count_info_feature(){
 
 ###############################################################################
 
+msg "Performing filtering operations on the VCF file"
+
   # Get only the SNPs that PASS
+msg "Filter VCF by PASS"
 java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.vcf $OUTPUT_DIR/varcall.binom.origins.pass.vcf pass
 
   # Annotate these SNPs with mating type loci, genes and named genes
+msg "Annotate SNPs"
 java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.pass.vcf - annotate $gene_names GN \
   | java -jar rnasnped/rnasnped.jar filterVCF - - annotate $gene_regions GID \
   | java -jar rnasnped/rnasnped.jar filterVCF - $OUTPUT_DIR/varcall.binom.origins.annotated.vcf annotate $gene_coding_regions GCR
 
   # Convert to GFF so we can view it in IGV
+msg "Convert VCF -> GFF3 for IGV view"
 java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toGFF3 $OUTPUT_DIR/varcall.binom.origins.annotated.gff
 
   # Produce the Tree for all the genes
-java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin /dev/stdout | dot -Tpdf -o $OUTPUT_DIR/DOT.nonmatingtype.pdf
+msg "Produce tree file containing SNP counts"
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin - \
+ | dot -Tpdf -o $OUTPUT_DIR/DOT.SNPs.pdf
 
  # What are these SNPs like?
-java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - homoSNP | count_info_feature NN
-java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - hetSNP | count_info_feature NN
+msg "How many homozygous SNPs are there at each node in the sample tree?"
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - homoSNP \
+ | count_info_feature NN
 
+msg "How many heterozygous SNPs are there at each node in the sample tree?"
+java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - hetSNP \
+ | count_info_feature NN
+
+msg "Produce tsv file containing SNPs and read depth per node in sample tree"
   # Add the read counts to the mutation counts
 java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf /dev/null toDOT $tree_file Origin - \
   | grep '^/[*].\+[*]/$' \
@@ -246,71 +269,53 @@ java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.anno
      }' > $OUTPUT_DIR/sample_SNPs_reads.tsv
 
   # Annotate the deleteriousness of the SNPs
+msg "Determine deleteriousness of SNPs in coding regions"
 java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf $OUTPUT_DIR/varcall.binom.origins.GCR.vcf isolateRegions $gene_coding_regions GCR
-python varCaller/filterVCFDeleteriousness.py $OUTPUT_DIR/varcall.binom.origins.GCR.vcf $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf $gff_file $reference_file
+python rnasnped/filterVCFDeleteriousness.py $OUTPUT_DIR/varcall.binom.origins.GCR.vcf $OUTPUT_DIR/varcall.binom.origins.GCR.deleteriousness.vcf $gff_file $reference_file
 
-  # The SNPs in domains, how many are deleterious?
-cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf | java -jar rnasnped/rnasnped.jar filterVCF - - infoStringEq DM "" not | count_info_feature DL
+msg "Phase deleterious SNPs"
+cat $OUTPUT_DIR/varcall.binom.origins.GCR.deleteriousness.vcf \
+  | java -jar rnasnped/rnasnped.jar phaseSNPs - $OUTPUT_DIR/varcall.binom.origins.GCR.deleteriousness.phased.vcf GID
 
-cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.vcf \
-  | java -jar rnasnped/rnasnped.jar phaseSNPs - $OUTPUT_DIR/varcall.binom.origins.nomatingtype.GCR.deleteriousness.phased.vcf GID
-
+msg "Phase all SNPs using VAFs"
 cat $OUTPUT_DIR/varcall.binom.origins.annotated.vcf \
   | java -jar rnasnped/rnasnped.jar filterVCF - - isolateRegions $gene_coding_regions GCR \
-  | java -jar rnasnped/rnasnped.jar phaseSNPs - - GID
+  | java -jar rnasnped/rnasnped.jar phaseSNPs - $OUTPUT_DIR/varcall.binom.origins.annotated.phased.vcf  GID
 
   # Get window for ALL hetero/homozygous SNPs in the wildtype
-win_cmd="cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
-  | grep 70s_wildtype \
-  | $scala_cmd slidingWindowSNPs2 - $OUTPUT_DIR/windowSizes.wildtype.bedgraph 10000"
-sauto short --job-name "wincmd_hh" --mem 50000 -cmd "$win_cmd"
+msg "Calculate sliding window using all SNPs"
+cat $OUTPUT_DIR/varcall.binom.origins.annotated.vcf \
+  | java -jar rnasnped/rnasnped.jar slidingWindowSNPs2 - $OUTPUT_DIR/windowSizes.wildtype.bedgraph 10000
 
   # Get window for ONLY heterozygous SNPs in the wildtype
-win_cmd="cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf  \
-  | grep 70s_wildtype \
-  | $scala_cmd filterVCF - - hetSNP \
-  | $scala_cmd slidingWindowSNPs2 - $OUTPUT_DIR/windowSizes.wildtype.het.bedgraph 10000"
-sauto short --job-name "wincmd_h" --mem 50000 -cmd "$win_cmd"
+msg "Calculate sliding windows using only heterozygous SNPs"
+cat $OUTPUT_DIR/varcall.binom.origins.annotated.vcf  \
+  | java -jar rnasnped/rnasnped.jar filterVCF - - hetSNP \
+  | java -jar rnasnped/rnasnped.jar slidingWindowSNPs2 - $OUTPUT_DIR/windowSizes.wildtype.het.bedgraph 10000
 
   # Only heterozygous SNPs NOT in the wildtype
-win_cmd="cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
-  | grep -v  70s_wildtype \
-  | $scala_cmd filterVCF - - hetSNP \
-  | $scala_cmd slidingWindowSNPs2 - $OUTPUT_DIR/windowSizes.nowildtype.het.bedgraph 10000"
-sauto short --job-name "wincmd_ha" --mem 50000 -cmd "$win_cmd"
+msg "Calculate sliding window using only homozygous SNPs"
+cat $OUTPUT_DIR/varcall.binom.origins.annotated.vcf \
+  | java -jar rnasnped/rnasnped.jar filterVCF - - hetSNP \
+  | java -jar rnasnped/rnasnped.jar slidingWindowSNPs2 - $OUTPUT_DIR/windowSizes.nowildtype.het.bedgraph 10000
 
-  # Get the SNPs to estimate mutation rate
-cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
-  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_with_wildtype MutationRate - \
+  # Get the number of SNPs to estimate mutation rate
+msg "Create tsv containing the number of SNPs in each node in the tree"
+cat $OUTPUT_DIR/varcall.binom.origins.annotated.vcf \
+  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_file MutationRate - \
   | grep -e '^/[*]' \
   | tr -d '/*' \
   > $OUTPUT_DIR/mutation_rate_samples.tsv
 
-
-  # Mutation rate only in the mating type loci!
-cat $OUTPUT_DIR/varcall.binom.origins.matingtype.vcf \
-  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_with_wildtype MTLSNPs - \
-  | grep -e '^/[*]' \
-  | tr -d '/*' \
-  > $OUTPUT_DIR/mutation_rate_mtl.tsv
-
-  # Look at mutations in highly mutated regions
-cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
-  | grep -v "70s" \
-  | java -jar rnasnped/rnasnped.jar slidingWindowSNPs - - 10000 20 \
-  | java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf - isolateRegions - SW \
-  | grep -v "70s" \
-  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_with_wildtype SlidingWindowSNPs -  \
+msg "Draw tree using only SNPs in highly mutated regions"
+cat $OUTPUT_DIR/varcall.binom.origins.annotated.vcf \
+  | java -jar rnasnped/rnasnped.jar slidingWindowSNPs2 - - 1000 \
+  | grep -v -e "^#" -e "^track" \
+  | awk '{ if( $4 > 16){print $0}}' \
+  | java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.annotated.vcf - isolateRegions - SW \
+  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_file SlidingWindowSNPs -  \
   | dot -Tpdf -o $OUTPUT_DIR/DOT.SlidingWindowSNPs.pdf
 
-cat $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf \
-  | grep -v "70s" \
-  | java -jar rnasnped/rnasnped.jar slidingWindowSNPs - - 10000 20 \
-  | java -jar rnasnped/rnasnped.jar filterVCF $OUTPUT_DIR/varcall.binom.origins.nomatingtype.vcf - isolateRegions - SW \
-  | java -jar rnasnped/rnasnped.jar filterVCF - /dev/null toDOT $tree_with_wildtype MTLSNPs - \
-  | grep -e '^/[*]' \
-  | tr -d '/*' \
-  > $OUTPUT_DIR/mutation_rate_slidingWindow.tsv
 
 ###############################################################################
 

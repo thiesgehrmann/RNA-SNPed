@@ -137,29 +137,48 @@ def write_vcf(vcf, outfile):
   outfd.close()
 #edef
 
+def help(arg0):
+  print "%s: Annotate a deleteriousness to SNPs in a VCF file" % arg0
+  print "usage: %s <input_vcf> <output_vcf> <gff_file> <fa_file>"
+  print ""
+  print " input_vcf:  The input VCF file"
+  print " output_vcf: The location of the output VCF"
+  print " gff_file:   A GFF file containing gene descriptions"
+  print " fa_file:    The genome sequence in multifasta format"
+  print ""
+  print " Each SNP in a coding region will be annotated with an extra field in the info field, dl=X, where X can be either"
+  print "  S: Synonymous"
+  print "  M: Missense"
+  print "  N: Nonsense"
+
 ###############################################################################
 if __name__ == '__main__':
 
-  input_vcf  = sys.argv[1];
-  output_vcf = sys.argv[2];
-  gff_file   = sys.argv[3];
-  fa_file    = sys.argv[4];
+  if (len(sys.argv) < 5 or sys.argv[1] == 'help'):
+    help(sys.argv[0])
+  else:
+
+    input_vcf  = sys.argv[1];
+    output_vcf = sys.argv[2];
+    gff_file   = sys.argv[3];
+    fa_file    = sys.argv[4];
 
 
-  VCF = Read(input_vcf).Without(_.dl)
-  G   = Read(gff_file);
-  S   = Read(fa_file)
+    VCF = Read(input_vcf, format="vcf").Without(_.dl)
+    G   = Read(gff_file);
+    S   = Read(fa_file)
 
-  G_exons = G[_.feature == 'exon'].GroupBy(_.parent).Sort(_.start).Get(_.seqname[0], _.parent, _.start.Array(), _.end.Array(), _.strand[0]);
-  G_seq   = (G_exons | Match(_.seqname, _.f0) | S).Get(_.seqname, _.parent, _.start, _.end, _.strand, _.Get(_.seq, _.start, _.end, _.strand).Each(lambda seq, starts, ends, strand: translate(seq, starts, ends, strand)) / 'transcript')
-
-
-  VCF_genes_seq = ((VCF.To(_.gcr, Do=_.ReplaceMissing("")) | Match(_.gcr, _.parent) | G_seq[_.parent.In(VCF.gcr.Unique())]).Without(_.seqname, _.parent) | Match(_.chrom, _.f0) | S).Copy()
-
-  VCF_dl = VCF_genes_seq.Get( _.Get(_.pos, _.ref, _.alt.Array(), _.seq, _.start, _.end, _.strand, _.transcript).Each(lambda pos, ref, alts, seq, starts, ends, strand, t: apply_mut_translate(pos, ref, alts, seq, starts, ends, strand, t)) / "dl", *VCF.Names).Copy()
+    G_exons = G[_.feature == 'exon'].GroupBy(_.parent).Sort(_.start).Get(_.seqname[0], _.parent, _.start.Array(), _.end.Array(), _.strand[0]);
+    G_seq   = (G_exons | Match(_.seqname, _.f0) | S).Get(_.seqname, _.parent, _.start, _.end, _.strand, _.Get(_.seq, _.start, _.end, _.strand).Each(lambda seq, starts, ends, strand: translate(seq, starts, ends, strand)) / 'transcript')
 
 
-  write_vcf(VCF_dl.Without(_.samples).Sort((_.chrom, _.pos)), output_vcf)
+    VCF_genes_seq = ((VCF.To(_.gcr, Do=_.ReplaceMissing("")) | Match(_.gcr, _.parent) | G_seq[_.parent.In(VCF.gcr.Unique())]).Without(_.seqname, _.parent) | Match(_.chrom, _.f0) | S).Copy()
+
+    VCF_dl = VCF_genes_seq.Get( _.Get(_.pos, _.ref, _.alt.Array(), _.seq, _.start, _.end, _.strand, _.transcript).Each(lambda pos, ref, alts, seq, starts, ends, strand, t: apply_mut_translate(pos, ref, alts, seq, starts, ends, strand, t)) / "dl", *VCF.Names).Copy()
+
+
+    write_vcf(VCF_dl.Without(_.samples).Sort((_.chrom, _.pos)), output_vcf)
+  #fi
 #fi
 
 ###############################################################################

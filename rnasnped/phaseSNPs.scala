@@ -8,21 +8,37 @@ object phaseSNPs {
 
   def main(args: Array[String]) = {
 
-    val vcfFile   = args(0);
-    val outFile   = args(1);
-    val fieldName = args(2);
+    if (args.length < 3 || args(0) == "help") {
+      help()
+    } else {
 
-    //print(vcfFile + "\n")
+      val vcfFile   = args(0);
+      val outFile   = args(1);
+      val fieldName = args(2);
 
-    val vcf  = VCF.readVCF(vcfFile);
-    val iter = new groupVCIteratorGene(vcf.buffered, fieldName);
+      //print(vcfFile + "\n")
 
-    val phasedSNPs = iter.filter(g => g.length > 0).map(g => phase(g, fieldName)).flatMap(x => x)
-    //iter.foreach( g => print("--%d--\n" format g.length))
-    //vcf.foreach(v => print(v))
+      val vcf  = VCF.readVCF(vcfFile);
+      val iter = new groupVCIteratorGene(vcf.buffered, fieldName);
 
-    VCF.write(phasedSNPs, outFile)
+      val phasedSNPs = iter.filter(g => g.length > 0).map(g => phase(g, fieldName)).flatMap(x => x)
+      //iter.foreach( g => print("--%d--\n" format g.length))
+      //vcf.foreach(v => print(v))
 
+      VCF.write(phasedSNPs, outFile)
+    }
+
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  def help() = {
+    println("phaseSNPs: Phase SNPs in VCF file within a gene based on VAFs")
+    println("Usage: phaseSNPs <vcfFile> <outFile> <fieldName>")
+    println("")
+    println(" vcfFile:   The input VCF")
+    println(" outFile:   The output VCF location")
+    println(" fieldName: The name of the field to use as a gene identifier e.e. GCR")
   }
 
   /////////////////////////////////////////////////////////////////////////////

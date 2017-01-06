@@ -61,7 +61,6 @@ object slidingWindowSNPs2 {
         nvc  += 1
         SNPdict(contig).insert(new Interval(vc.pos, vc.pos))
       }
-      print("\nFinished processing contig: %s\n" format contig)
       (contig, minp, maxp, nvc)
     }
 
@@ -80,8 +79,6 @@ object slidingWindowSNPs2 {
           Tuple4(pElem._1, pElem._2, pos, ws) :: pList.drop(1)
         }
         else{
-          print(pElem)
-          print("\n");
           Tuple4(contig, pos, pos, ws) :: pList
         }
       }.filter( x => x._4.foldLeft(0)(math.max(_, _)) > 0).foreach{
