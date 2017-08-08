@@ -12,15 +12,18 @@ object filterVCF {
   val operations = Map( "removeRegions"  -> remove _,
                         "isolateRegions" -> isolate _,
                         "annotate"       -> annotate _,
+                        "addOP"          -> addOP _,
                         "infoMin"        -> infoMin _,
                         "infoMax"        -> infoMax _,
                         "infoStringEq"   -> infoStringEq _,
                         "pass"           -> pass _,
                         "toGFF3"         -> toGFF _,
                         "toDOT"          -> toDOT _,
+                        "toDOT2"         -> toDOT2 _,
                         "hetSNP"         -> hetSNP _,
                         "homoSNP"        -> homoSNP _,
-                        "rmKOSampleSNP"  -> rmKOSampleSNP _);
+                        "rmKOSampleSNP"  -> rmKOSampleSNP _,
+                        "addCS"          -> addSNPCallSupport _ )
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -193,6 +196,20 @@ object filterVCF {
         }                   
     }
   }
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  def addOP(params: Array[String], vcf: Iterator[VCF.VC]) = {
+
+     vcf.map{
+       vc =>
+         if ((vc.info contains "NI") && (vc.info contains "NP")) {
+           val ni = vc.info("NI").toInt
+           VCF.VC(vc.contig, vc.pos, vc.ident, vc.ref, vc.alt, vc.qual, vc.filter, vc.info + ("OP" -> vc.info("NP").slice(ni-1,ni)))
+         } else { vc }
+     }
+
+  }
   
   /////////////////////////////////////////////////////////////////////////////
 
@@ -304,6 +321,75 @@ object filterVCF {
      outfd.close();
 
      Iterator.empty
+  }
+
+  def toDOT2(params: Array[String], vcf: Iterator[VCF.VC]) = {
+    val tree_file = params(0);
+    val graphName = params(1);
+    val outFile   = params(2);
+
+    val sTree = sampleTree.readTree(tree_file)
+    val gvcf  = vcf.toArray.groupBy(_.info("NI").toInt)
+    val parentPaths = sampleTree.parentPaths(sTree)
+
+
+    val outfd = if(outFile == "-") new BufferedWriter(new OutputStreamWriter(System.out, "utf-8")) else new BufferedWriter(new OutputStreamWriter(new FileOutputStream(outFile), "utf-8"))
+
+    outfd.write("digraph %s{\n" format graphName);
+    outfd.write("  rankdir=LR;\n");
+    outfd.write("  ranksep=1.0;\n");
+
+    sTree.foreach{ node =>
+      val nodeID = node.id
+
+      val nodeParentPath = parentPaths(nodeID).toArray.distinct
+
+      val thisNodeTotal = gvcf(nodeID+1).size
+      val thisNodeYes   = gvcf(nodeID+1).filter(_.info("NP").charAt(nodeID) == 'y').size
+      val thisNodeMaybe = thisNodeTotal - thisNodeYes
+
+      val parentPathNodesTotal = nodeParentPath.map(parentID => gvcf(parentID+1).size).foldLeft(0)(_ + _)
+      val parentPathNodesYes   = nodeParentPath.map(parentID => gvcf(parentID+1).filter(_.info("NP").charAt(parentID) == 'y').size).foldLeft(0)(_ + _)
+      val parentPathNodesMaybe = parentPathNodesTotal - parentPathNodesYes
+
+      outfd.write("  n%d [ shape=record, label=\"{ <enter> %s | { Unique: %d | Yes: %d | Maybe: %d } | { Total: %d | <exit> Yes: %d | Maybe: %d}}\"]\n" format
+        (nodeID+1,
+         node.name,
+         thisNodeTotal, thisNodeYes, thisNodeMaybe,
+         parentPathNodesTotal, parentPathNodesYes, parentPathNodesMaybe))
+      outfd.write("/*%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d*/\n" format
+        (nodeID+1,
+         node.name,
+         thisNodeTotal, thisNodeYes, thisNodeMaybe,
+         parentPathNodesTotal, parentPathNodesYes, parentPathNodesMaybe))
+     }
+
+     sTree.foreach( node => node.children.foreach( c => outfd.write("  n%d:exit -> n%d:enter\n" format (node.id+1, c+1)) ) )
+
+     outfd.write("}");
+     outfd.close();
+
+     Iterator.empty
+
+    
+    
+    
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  def addSNPCallSupport(params: Array[String], vcf: Iterator[VCF.VC]) = {
+    val tree_file = params(0);
+    val sTree = sampleTree.readTree(tree_file)
+    val nodeLeaves = sampleTree.getNodeLeaves(sTree)
+
+    vcf.map{ vc =>
+      val originNodeID = vc.info("NI").toInt - 1
+      val leaves = nodeLeaves(originNodeID)
+      val nodePossible = vc.info("NP")
+      val cs = leaves.map( lID => if (nodePossible.charAt(lID) == 'y') 1 else 0).foldLeft(0)(_ + _).toFloat / leaves.length.toFloat 
+      VCF.VC(vc.contig, vc.pos, vc.ident, vc.ref, vc.alt, vc.qual, vc.filter, vc.info + ("CS" -> cs.toString))
+    }
   }
 
   /////////////////////////////////////////////////////////////////////////////

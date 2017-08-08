@@ -119,6 +119,7 @@ object VCF{
     outfd.write("##INFO=<ID=DL,Number=1,Type=String,Description=\"Deleteriousness of SNP\">\n");
     outfd.write("##INFO=<ID=VP,Number=1,Type=String,Description=\"Allele of SNP\">\n");
     outfd.write("##INFO=<ID=DM,Number=1,Type=String,Description=\"Domain annotation\">\n");
+    outfd.write("##INFO=<ID=CS,Number=1,Type=Float,Description=\"Support for the call (number of leaves with the snp / number of leaves)\">\n")
     outfd.write("##FILTER=<ID=NX,Description=\"No Expression\">\n")
     outfd.write("##FILTER=<ID=LX,Description=\"Low Expression\">\n")
     outfd.write("##FILTER=<ID=MSNP,Description=\"SNP multiple alternative alleles\">\n")
