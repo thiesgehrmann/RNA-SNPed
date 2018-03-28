@@ -1,0 +1,8 @@
+{
+
+"outdir" : "./",
+
+"star_index_params": "",
+"star_params" : "--alignIntronMin 5 --alignIntronMax 4000 --alignEndsType EndToEnd",
+"strandSpecific" : false
+}

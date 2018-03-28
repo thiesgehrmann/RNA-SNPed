@@ -1,0 +1,45 @@
+{
+
+"outdir" : "./output",
+
+"reference_file" : "example/genomes/refgenome.fasta",
+"gff_file" : "example/genomes/genome.gff",
+"prebuilt_sjdb" : "example/empty_splice_junction_db.tsv",
+"nonempty_sjdb" : "example/splice_junction_db.tsv",
+"data_file" : "example/data_file.tsv",
+
+"samples" : {
+  "sample0" : {
+    "R1"           : "example/data/sample_0_R1.fastq",
+    "R2"           : "example/data/sample_0_R2.fastq",
+    "ID"           : 1,
+    "group_id"     : 1,
+    "group_name"   : "grand_child_1.1",
+    "sample_stage" : 1 },
+  "sample1" : {
+    "R1"           : "example/data/sample_1_R1.fastq",
+    "R2"           : "example/data/sample_1_R2.fastq",
+    "ID"           : 2,
+    "group_id"     : 2,
+    "group_name"   : "grand_child_1.2",
+    "sample_stage" : 2 },
+  "sample2" :{ 
+    "R1"           : "example/data/sample_2_R1.fastq",
+    "R2"           : "example/data/sample_2_R2.fastq",
+    "ID"           : 3,
+    "group_id"     : 3,
+    "group_name"   : "grand_child_2.1",
+    "sample_stage" : 3 },
+  "sample3" :{ 
+    "R1"           : "example/data/sample_3_R1.fastq",
+    "R2"           : "example/data/sample_3_R2.fastq",
+    "ID"           : 4,
+    "group_id"     : 4,
+    "group_name"   : "grand_child_2.2",
+    "sample_stage" : 4 } },
+"tree_file" : "example/tree.tsv",
+
+"gene_coding_regions":"gene_coding_regions.tsv",
+"gene_regions":"gene_regions.tsv",
+"gene_names":"gene_names.tsv"
+}

@@ -1,0 +1,7 @@
+channels:
+ - bioconda
+dependencies:
+ - picard
+ - star
+ - samtools
+ - scala

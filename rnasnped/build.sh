@@ -3,8 +3,10 @@
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )";
 
 # If you have a special scala installation directory, please either add it to your PATH variable, or edit the following lines
-scala="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scala"
-scalac="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scalac"
+#scala="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scala"
+#scalac="/home/nfs/thiesgehrmann/scala-2.11.7/bin/scalac"
+scala="scala"
+scalac="scalac"
 
 scala_class_path="./:lib/htsjdk-2.5.0-SNAPSHOT-all.jar:lib/log4j-1.2.17.jar:lib/commons-math3-3.6.1.jar:lib/org.arabidopsis.interval.jar"
 alias scala="$scala -classpath $scala_class_path";
