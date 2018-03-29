@@ -1,12 +1,9 @@
 {
-
-"outdir" : "./output",
+"outdir" : "example/output",
 
 "reference_file" : "example/genomes/refgenome.fasta",
 "gff_file" : "example/genomes/genome.gff",
-"prebuilt_sjdb" : "example/empty_splice_junction_db.tsv",
-"nonempty_sjdb" : "example/splice_junction_db.tsv",
-"data_file" : "example/data_file.tsv",
+"tree_file" : "example/tree.tsv",
 
 "samples" : {
   "sample0" : {
@@ -36,10 +33,5 @@
     "ID"           : 4,
     "group_id"     : 4,
     "group_name"   : "grand_child_2.2",
-    "sample_stage" : 4 } },
-"tree_file" : "example/tree.tsv",
-
-"gene_coding_regions":"gene_coding_regions.tsv",
-"gene_regions":"gene_regions.tsv",
-"gene_names":"gene_names.tsv"
+    "sample_stage" : 4 } }
 }

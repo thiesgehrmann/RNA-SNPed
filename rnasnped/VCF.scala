@@ -72,7 +72,7 @@ object VCF{
     val s = line.split('\t');
 
     val contig = s(0);
-    val pos    = s(1).toInt;
+    val pos    = s(1).toInt - 1;
     val ident  = s(2);
     val ref    = s(3)(0);
     val alt    = if(s(4).length == 0) Array(VCF.emptyChar) else s(4).split(',').map(x => x(0))
@@ -131,7 +131,7 @@ object VCF{
 
     VCs.foreach{
       x => outfd.write("%s\t%d\t%s\t%c\t%s\t%s\t%s\t%s\n" format (x.contig,
-                                                                  x.pos,
+                                                                  x.pos+1,
                                                                   x.ident,
                                                                   x.ref,
                                                                   if(x.alt.length == 0) "." else x.alt.mkString(","),

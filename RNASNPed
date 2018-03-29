@@ -2,7 +2,7 @@
 
 SCRIPTDIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
-action="assign_origin"
+action="all"
 sm_params=""
 validate=0
 sm_file="$SCRIPTDIR/Snakefile"

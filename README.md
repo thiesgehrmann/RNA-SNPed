@@ -1,6 +1,8 @@
 # RNA-SNPed
 RNA-SNPed is a method to detect SNPs in an Experimental Design from RNA-Seq data.
 
+![alt text][example/output/summary/snps_tree.png]]
+
 To use RNA-SNPed, you must have four types of information (listed in increasing order of difficulty to obtain):
  * A reference genome (FASTA),
  * A GFF file
@@ -25,11 +27,17 @@ The example dataset can very easily be run with:
 ```
 
 ## Output from the RNA-SNPed pipeline
-The output of the RNA-SNPed are (mostly) VCF files.
+The output of the RNA-SNPed is a VCF file, and some additional summary information:
 
-These are listed here and briefly described.
+ * *`outdir`/annotated/varcall.binom.origins.deleteriousness.vcf* The VCF fiel containing variants
+ * *`outdir`/summary/variants_per_node.tsv* A description of the number of variants per node
+ * *`outdir`/summary/effect_counts.tsv* A summary of the effect of SNPs across the whole set (Synonymous/Missense/Nonsense)
+ * *`outdir`/summary/snps_tree.pdf* A tree describing the accumulation of SNPs in the experimental design
 
 ## Running RNA-SNPed on your own dataset
+
+In order to run your own samples, you must modify the config.json file used.
+Look at the one provided in the example dataset to see the structure
 
 ### Defining your own sample tree
 The challenge for running RNA-SNPed on your own dataset exists mainly in the definition of your sample tree.

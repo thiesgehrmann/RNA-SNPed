@@ -1,6 +1,7 @@
 # gffread -E cleaned_gene_model_proteinid.gtf -o cleaned_gene_model_proteinid.gff3.gff
 ##gff-version 3
-scaffold_14	JGI	mRNA	1	1541	.	+	.	ID=2519514
+scaffold_14	JGI	Gene	1	1541	.	+	.	ID=Gene1;Name=Gene1
+scaffold_14	JGI	mRNA	1	1541	.	+	.	ID=2519514;Parent=Gene1;Name=mRNA1
 scaffold_14	JGI	exon	1	128	.	+	.	Parent=2519514
 scaffold_14	JGI	exon	177	196	.	+	.	Parent=2519514
 scaffold_14	JGI	exon	247	417	.	+	.	Parent=2519514

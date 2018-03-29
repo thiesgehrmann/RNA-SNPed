@@ -5,3 +5,7 @@ dependencies:
  - star
  - samtools
  - scala
+ - pandas
+ - pyvcf
+ - intervaltree
+ - graphviz

@@ -15,6 +15,8 @@ __RUN_DIR__ = os.path.abspath(dconfig["outdir"])
 __STAR_OUTDIR__ = "%s/star_align" % __RUN_DIR__
 __PICARD_OUTDIR__ = "%s/picard" % __RUN_DIR__
 __RNASNPED_OUTDIR__ = "%s/rnasnped" % __RUN_DIR__
+__ANNOTATED_OUTDIR__ = "%s/annotated" % __RUN_DIR__
+__SUMMARY_OUTDIR__ = "%s/summary" % __RUN_DIR__
 
 ###############################################################################
 # Use STAR to align to reference genome
@@ -157,6 +159,7 @@ rule call_vars:
     vcf = "%s/varcalls.binom.{sample}.vcf" % __RNASNPED_OUTDIR__
   params:
     id = lambda wildcards: dconfig["samples"][wildcards.sample]["ID"]
+  conda: "%s/conda.yaml" % __PC_DIR__
   shell : """
     java -Xmx48G -jar "{input.jar}" variantCaller "{input.sj}" "{input.ref}" "{input.bam}" "rnasnp.{params.id}" "{output.vcf}"
   """
@@ -194,6 +197,7 @@ rule assign_origin:
     vcf = rules.mergesort.output.vcf
   output:
     vcf = "%s/varcall.binom.origins.vcf" % __RNASNPED_OUTDIR__
+  conda: "%s/conda.yaml" % __PC_DIR__
   shell: """
     java -Xmx400G -jar "{input.jar}" assignOrigin "{input.vcf}" "{input.tree}" "{output.vcf}"
   """
@@ -211,35 +215,140 @@ rule filter_pass:
 ###############################################################################
 # Annotate the variants we found
 
-#rule gene_annots:
-#  input:
-#    gff = dconfig["gff"],
-#  output:
-#    gene_names = "%s/gene_names.tsv" % __ANNOTATED_OUTDIR__,
-#    gene_regions = "%s/gene_regions.tsv" % __ANNOTATED_OUTDIR__,
-#    coding_regions = "%s/coding_regions.tsv" % __ANNOTATED_OUTDIR__,
-#  params:
-#    nameAttr = dconfig["GFF_name_attribute"],
-#    geneFeature = dconfig["GFF_gene_feature"],
-#    cdsFeature  = dconfig["GFF_cds_feature"]
-#  run:
-#
-#rule annotate_genes:
-#  input:
-#    vcf = rules.filter_pass.output.vcf,
-#    gene_names = rules.gene_annots.output.names,
-#    gene_regions = rules.gene_annots.output.regions,
-#    coding_regions = rules.gene_annots.output.coding_regions,
-#    jar = rules.build_rnasnped.output.jar
-#  output:
-#    vcf = "%s/varcall.binom.origins.annotated.vcf" % __ANNOTATED_OUTDIR__
-#  shell: """
-#    java -jar "{input.jar}"/ filterVCF "{input.vcf}" - annotate "{input.gene_names}" GN \
-#      | java -jar "{input.jar}"/ filterVCF - - annotate "{input.gene_regions}" GID \
-#      | java -jar "{input.jar}"/ filterVCF - "{output.vcf}" annotate "{input.coding_regions}" GCR
-#  """
+rule gene_annots:
+  input:
+    gff = dconfig["gff_file"],
+  output:
+    names = "%s/gene_names.tsv" % __ANNOTATED_OUTDIR__,
+    regions = "%s/gene_regions.tsv" % __ANNOTATED_OUTDIR__,
+    coding_regions = "%s/coding_regions.tsv" % __ANNOTATED_OUTDIR__,
+  params:
+    nameAttr = dconfig["GFF_name_attribute"],
+    geneFeature = dconfig["GFF_gene_feature"],
+    cdsFeature  = dconfig["GFF_cds_feature"]
+  run:
+    from pipeline_components import biu
 
+    gff = biu.formats.GFF3(input.gff)
+    genes = [ e for e in gff.entries if (e.feature == params.geneFeature) ]
+    with open(output.names, "w") as ofd:
+      for e in [e for e in genes if (params.nameAttr in e.attr) ]:
+        ofd.write("%s\t%d\t%d\t%s\n" % (e.seqid, e.start, e.end, e.attr[params.nameAttr]))
+      #efor
+    #ewith
 
+    with open(output.regions, "w") as ofd:
+      for e in genes:
+        ofd.write("%s\t%d\t%d\t%s\n" % (e.seqid, e.start, e.end, e.attr["ID"]))
+      #efor
+    #ewith
+
+    with open(output.coding_regions, "w") as ofd:
+      for e in genes:
+        geneID = e.attr["ID"]
+        cds = gff.getChildren(geneID, feature=params.cdsFeature).entries
+        for cr in cds:
+          ofd.write("%s\t%d\t%d\t%s\n" % (cr.seqid, cr.start, cr.end, geneID))
+        #efor
+      #efor
+    #ewith
+
+rule annotate_genes:
+  input:
+    vcf = rules.filter_pass.output.vcf,
+    gene_names = rules.gene_annots.output.names,
+    gene_regions = rules.gene_annots.output.regions,
+    coding_regions = rules.gene_annots.output.coding_regions,
+    jar = rules.build_rnasnped.output.jar
+  output:
+    vcf = "%s/varcall.binom.origins.annotated.vcf" % __ANNOTATED_OUTDIR__
+  conda: "%s/conda.yaml" % __PC_DIR__
+  shell: """
+    java -jar "{input.jar}" filterVCF "{input.vcf}" - annotate "{input.gene_names}" GN \
+      | java -jar "{input.jar}" filterVCF - - annotate "{input.gene_regions}" GID \
+      | java -jar "{input.jar}" filterVCF - "{output.vcf}" annotate "{input.coding_regions}" GCR
+  """
+
+rule annotate_deleterious_vars:
+  input:
+    jar = rules.build_rnasnped.output.jar,
+    gff = dconfig["gff_file"],
+    ref = dconfig["reference_file"],
+    vcf = rules.annotate_genes.output.vcf
+  output:
+    vcf = "%s/varcall.binom.origins.deleteriousness.vcf" % __ANNOTATED_OUTDIR__
+  conda: "%s/conda.yaml" % __PC_DIR__
+  params:
+    script = '%s/annotate_deleteriousness.py' % __PC_DIR__
+  shell: """
+    "{params.script}" "{input.vcf}" "{output.vcf}" "{input.gff}" "{input.ref}"
+  """
 
 ###############################################################################
 # Summarize the variants we found
+
+rule dot_output:
+  input:
+    jar = rules.build_rnasnped.output.jar,
+    vcf = rules.annotate_deleterious_vars.output.vcf,
+    tree = dconfig["tree_file"]
+  output:
+    pdf = "%s/snps_tree.pdf" % __SUMMARY_OUTDIR__,
+    png = "%s/snps_tree.png" % __SUMMARY_OUTDIR__
+  conda: "%s/conda.yaml" % __PC_DIR__
+  shell: """
+    java -jar "{input.jar}" filterVCF "{input.vcf}" /dev/null toDOT "{input.tree}" Origin - \
+      | dot -Tpdf -o "{output.pdf}"
+
+    java -jar "{input.jar}" filterVCF "{input.vcf}" /dev/null toDOT "{input.tree}" Origin - \
+      | dot -Tpng -o "{output.png}"
+  """
+
+rule variants_per_node:
+  input:
+    jar = rules.build_rnasnped.output.jar,
+    vcf = rules.annotate_deleterious_vars.output.vcf,
+    tree = dconfig["tree_file"]
+  output:
+    tsv = "%s/variants_per_node.tsv" % __SUMMARY_OUTDIR__
+  conda: "%s/conda.yaml" % __PC_DIR__
+  shell: """
+    echo -e "ID\tName\tUnique\tUniqueYes\tUniqueMaybe\tTotal\tTotalYes\tTotalMaybe" > "{output.tsv}"
+
+    java -jar "{input.jar}" filterVCF "{input.vcf}" /dev/null toDOT "{input.tree}" Counts - \
+      | grep -e '^/[*]' \
+      | tr -d '/*' \
+      >> "{output.tsv}"
+  """
+
+rule effect_summary:
+  input:
+    vcf = rules.annotate_deleterious_vars.output.vcf,
+  output:
+    tsv = "%s/effect_counts.tsv" % __SUMMARY_OUTDIR__
+  shell: """
+
+    function count_info_feature(){{
+      tr '\t' '\n' | tr ';' '\n' | grep -e "^$1" | cut -d= -f2 | tr ',' '\n' | sort | uniq -c | sed -e 's/^[ ]\+//' | tr ' ' '\t' | sort -k1,1n
+    }}
+
+    echo -e "#S = Synonymous\n#M = Missense\n#N = Nonsense\nEffect\tCount" > "{output.tsv}"
+
+    cat "{input.vcf}" \
+      | count_info_feature "DL" \
+      | awk -F $'\t' 'BEGIN{{OFS=FS}} {{ print $2, $1 }}' \
+      >> "{output.tsv}"
+
+  """
+
+###############################################################################
+# Total output
+
+rule all:
+  input:
+    vcf = rules.annotate_deleterious_vars.output.vcf,
+    effect_summary = rules.effect_summary.output.tsv,
+    vpn = rules.variants_per_node.output.tsv,
+    pdf = rules.dot_output.output.pdf,
+    png = rules.dot_output.output.png
+    

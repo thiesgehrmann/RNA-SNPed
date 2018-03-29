@@ -121,7 +121,7 @@ object assignOrigin{
         val ((id, expr), index) = observedAltExpr.zipWithIndex.filter(x => x._1._2 > 0).last
         VCF.VC(firstVC.contig,
                firstVC.pos,
-               "%s;%s;%s.%d" format (firstVC.contig, firstVC.pos, sTree(id).name, id),
+               "%s;%s;%s.%d" format (firstVC.contig, firstVC.pos+1, sTree(id).name, id),
                firstVC.ref,
                VCs(index).alt,
                (100.0 / VCs.length).toInt,

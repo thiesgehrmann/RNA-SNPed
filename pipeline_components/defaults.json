@@ -4,5 +4,10 @@
 
 "star_index_params": "",
 "star_params" : "--alignIntronMin 5 --alignIntronMax 4000 --alignEndsType EndToEnd",
-"strandSpecific" : false
+"strandSpecific" : false,
+
+"GFF_name_attribute" : "Name",
+"GFF_gene_feature" : "mRNA",
+"GFF_cds_feature" : "CDS"
+
 }

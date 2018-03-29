@@ -62,6 +62,14 @@ else:
 
 # Check also the tree format!
 
+# Check that GFF file is present
+if "gff_file" not in config:
+  errors.append("GFF file not provided in 'gff_file'.")
+else:
+  if not(os.path.isfile(config["gff_file"])):
+    errors.append("GFF file '%s' does not exist." % config["gff_file"])
+  #fi
+#fi
 
 ###############################################################################
     
