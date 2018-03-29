@@ -208,6 +208,7 @@ rule filter_pass:
     vcf = rules.assign_origin.output.vcf
   output:
     vcf = "%s/varcall.binom.origins.pass.vcf" % __RNASNPED_OUTDIR__
+  conda: "%s/conda.yaml" % __PC_DIR__
   shell: """
     java -jar "{input.jar}" filterVCF "{input.vcf}" "{output.vcf}" pass
   """
@@ -226,6 +227,7 @@ rule gene_annots:
     nameAttr = dconfig["GFF_name_attribute"],
     geneFeature = dconfig["GFF_gene_feature"],
     cdsFeature  = dconfig["GFF_cds_feature"]
+  conda: "%s/conda.yaml" % __PC_DIR__
   run:
     from pipeline_components import biu
 

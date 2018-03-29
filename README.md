@@ -29,7 +29,7 @@ The example dataset can very easily be run with:
 ## Output from the RNA-SNPed pipeline
 The output of the RNA-SNPed is a VCF file, and some additional summary information:
 
- * *`outdir`/annotated/varcall.binom.origins.deleteriousness.vcf* The VCF fiel containing variants
+ * *`outdir`/annotated/varcall.binom.origins.deleteriousness.vcf* The VCF file containing variants
  * *`outdir`/summary/variants_per_node.tsv* A description of the number of variants per node
  * *`outdir`/summary/effect_counts.tsv* A summary of the effect of SNPs across the whole set (Synonymous/Missense/Nonsense)
  * *`outdir`/summary/snps_tree.pdf* A tree describing the accumulation of SNPs in the experimental design
