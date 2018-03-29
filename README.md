@@ -1,7 +1,7 @@
 # RNA-SNPed
 RNA-SNPed is a method to detect SNPs in an Experimental Design from RNA-Seq data.
 
-![alt text][example/output/summary/snps_tree.png]]
+![Example output of RNA-SNPed][example/output/summary/snps_tree.png]
 
 To use RNA-SNPed, you must have four types of information (listed in increasing order of difficulty to obtain):
  * A reference genome (FASTA),
