@@ -226,34 +226,12 @@ rule gene_annots:
   params:
     nameAttr = dconfig["GFF_name_attribute"],
     geneFeature = dconfig["GFF_gene_feature"],
-    cdsFeature  = dconfig["GFF_cds_feature"]
+    cdsFeature  = dconfig["GFF_cds_feature"],
+    script = "%s/gene_annots.py" % __PC_DIR__
   conda: "%s/conda.yaml" % __PC_DIR__
-  run:
-    from pipeline_components import biu
-
-    gff = biu.formats.GFF3(input.gff)
-    genes = [ e for e in gff.entries if (e.feature == params.geneFeature) ]
-    with open(output.names, "w") as ofd:
-      for e in [e for e in genes if (params.nameAttr in e.attr) ]:
-        ofd.write("%s\t%d\t%d\t%s\n" % (e.seqid, e.start, e.end, e.attr[params.nameAttr]))
-      #efor
-    #ewith
-
-    with open(output.regions, "w") as ofd:
-      for e in genes:
-        ofd.write("%s\t%d\t%d\t%s\n" % (e.seqid, e.start, e.end, e.attr["ID"]))
-      #efor
-    #ewith
-
-    with open(output.coding_regions, "w") as ofd:
-      for e in genes:
-        geneID = e.attr["ID"]
-        cds = gff.getChildren(geneID, feature=params.cdsFeature).entries
-        for cr in cds:
-          ofd.write("%s\t%d\t%d\t%s\n" % (cr.seqid, cr.start, cr.end, geneID))
-        #efor
-      #efor
-    #ewith
+  shell: """
+    "{params.script}" "{input.gff}" "{output.names}" "{output.regions}" "{output.coding_regions}" "{params.nameAttr}" "{params.geneFeature}" "{params.cdsFeature}"
+  """
 
 rule annotate_genes:
   input:
