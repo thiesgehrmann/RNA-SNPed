@@ -1,24 +1,45 @@
 # RNA-SNPed
 RNA-SNPed is a method to detect SNPs in an Experimental Design from RNA-Seq data.
 
-## Dependencies
- The core tool, **rnasnped**, only requires Java, but the full pipeline, including downstream analysis has several dependencies
- * To run rnasnped:
-   * Java
- * To compile rnasnped:
-   * Scala
- * To run the pipeline:
-   * Java
-   * Picard
-   * STAR RNA-Seq aligner
-   * Samtools
-   * To asses SNP deleteriousness
-     * Python
-     * Ibidas
+To use RNA-SNPed, you must have four types of information (listed in increasing order of difficulty to obtain):
+ * A reference genome (FASTA),
+ * A GFF file
+ * A set of FASTQ files per sample, and
+ * A tree defining the "phylogeny" of your samples
 
-## Usage
+## Running the RNA-SNPed pipeline
 
-To run the pipeline with the example dataset, simply execute `./pipeline_example.sh`.
+The RNA-SNPed pipeline is implemented in Snakemake, and dependencies are handled by Conda from within snakemake (these are listed in [pipeline_components/conda.yaml]).
+Thus, you must only have installed conda and snakemake to make use of this pipeline.
+I would even suggest installing snakemake in the root conda environment.
+
+### Dependencies
+ * (mini)conda
+ * snakemake
+
+### Running the example dataset
+The example dataset can very easily be run with:
+
+```shell
+  ./RNASNPed -t 10 example/config.json
+```
+
+## Output from the RNA-SNPed pipeline
+The output of the RNA-SNPed are (mostly) VCF files.
+
+These are listed here and briefly described.
+
+## Running RNA-SNPed on your own dataset
+
+### Defining your own sample tree
+The challenge for running RNA-SNPed on your own dataset exists mainly in the definition of your sample tree.
+If you are unsure of how the samples are related to each other, RNA-SNPed may not be the right tool for you.
+For the structure of your tree, see the tree.tsv file.
+
+### Modifying default parameters
+
+Look at defauls.json to see the parameters that can be modified.
+They names are quite self-explanatory, as they describe parameters for other tools such as STAR and PICARD. 
 
 ## **rnasnped** tool
 
@@ -39,7 +60,7 @@ To compile the tool, run the following command:
   cd rnasnped && ./build.sh && cd ..
 ```
 
-###Usage
+### Usage
 
 You can run the rnasnped tool using java
 ```bash
@@ -48,6 +69,4 @@ You can run the rnasnped tool using java
 
 where <task> takes the value of one of the five different tools listed above.
 Additional help is available by adding help as the first parameter to the tool. e.g. `java -jar variantCaller help`
-
-## Output VCF info fields
 

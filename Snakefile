@@ -211,6 +211,35 @@ rule filter_pass:
 ###############################################################################
 # Annotate the variants we found
 
+#rule gene_annots:
+#  input:
+#    gff = dconfig["gff"],
+#  output:
+#    gene_names = "%s/gene_names.tsv" % __ANNOTATED_OUTDIR__,
+#    gene_regions = "%s/gene_regions.tsv" % __ANNOTATED_OUTDIR__,
+#    coding_regions = "%s/coding_regions.tsv" % __ANNOTATED_OUTDIR__,
+#  params:
+#    nameAttr = dconfig["GFF_name_attribute"],
+#    geneFeature = dconfig["GFF_gene_feature"],
+#    cdsFeature  = dconfig["GFF_cds_feature"]
+#  run:
+#
+#rule annotate_genes:
+#  input:
+#    vcf = rules.filter_pass.output.vcf,
+#    gene_names = rules.gene_annots.output.names,
+#    gene_regions = rules.gene_annots.output.regions,
+#    coding_regions = rules.gene_annots.output.coding_regions,
+#    jar = rules.build_rnasnped.output.jar
+#  output:
+#    vcf = "%s/varcall.binom.origins.annotated.vcf" % __ANNOTATED_OUTDIR__
+#  shell: """
+#    java -jar "{input.jar}"/ filterVCF "{input.vcf}" - annotate "{input.gene_names}" GN \
+#      | java -jar "{input.jar}"/ filterVCF - - annotate "{input.gene_regions}" GID \
+#      | java -jar "{input.jar}"/ filterVCF - "{output.vcf}" annotate "{input.coding_regions}" GCR
+#  """
+
+
 
 ###############################################################################
 # Summarize the variants we found
