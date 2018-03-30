@@ -75,10 +75,14 @@ class GFF3Entry(object):
       utils.error("Sequence '%s' not found in provided fastaObject." % self.seqid)
       return None
     #fi
-    if self.strand == '+':
-      substr = fastaObject[self.seqid][self.start-1:self.end]
-    else:
-      substr = fastaObject[self.seqid][self.start:self.end+1].revcomp()
+    if self.seqid not in fastaObject:
+      utils.error("Sequence '%s' not found in provided fastaObject." % self.seqid)
+      return None
+    #fi
+
+    substr = fastaObject[self.seqid][self.start-1:self.end]
+    if self.strand == '-':
+      substr = substr.revcomp()
     #fi
 
     return substr
